@@ -1,0 +1,11 @@
+package com.bigdata;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class Reton1Application {
+    public static void main(String[] args) {
+        SpringApplication.run(Reton1Application.class, args);
+    }
+}

@@ -27,6 +27,7 @@ Antes de ejecutar el proyecto, asegúrate de tener instalado:
 ### 1. Verificar el Archivo de Datos
 
 Asegúrate de que el archivo `es-wiki-abstracts.txt` esté presente en el directorio raíz del proyecto. 
+- Enlace de descarga de `es-wiki-abstracts.txt`: https://drive.google.com/file/d/1junMIikr0Bu3_mxGElfJLm7cM2lW775M/view?usp=sharing
 
 ### 2. Compilar el Proyecto
 

@@ -120,7 +120,7 @@ yarn-error.log*
 *.xml
 !src/main/resources/**/*.xml
 !src/main/resources/**/*.json
-!es-wiki-abstracts.txt
+es-wiki-abstracts.txt
 
 # Application specific
 application-local.properties

@@ -58,6 +58,8 @@ public class WordAnalysisService {
                 .topWords(topWords)
                 .processingTimeMs(processingTime)
                 .totalTimeMs(totalTime)
+                .processingTimeSeconds(processingTime / 1000.0)
+                .totalTimeSeconds(totalTime / 1000.0)
                 .fileSize(getFileSize(filePath))
                 .build();
                 
@@ -157,11 +159,13 @@ public class WordAnalysisService {
         private List<WordFrequency> topWords;
         private long processingTimeMs;
         private long totalTimeMs;
+        private double processingTimeSeconds;
+        private double totalTimeSeconds;
         private long fileSize;
         private double wordsPerSecond;
         
         public double getWordsPerSecond() {
-            return totalTimeMs > 0 ? (double) totalWords / (totalTimeMs / 1000.0) : 0;
+            return totalTimeSeconds > 0 ? (double) totalWords / totalTimeSeconds : 0;
         }
         
         public String getFormattedFileSize() {

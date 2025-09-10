@@ -30,13 +30,22 @@ public class WordAnalysisController {
     public ResponseEntity<?> analyzeWords() {
         try {
             log.info("Iniciando análisis de palabras para archivo: {}", FILE_PATH);
+            long controllerStartTime = System.currentTimeMillis();
             
             WordAnalysisService.AnalysisResult result = wordAnalysisService.analyzeFile(FILE_PATH);
+            
+            long controllerEndTime = System.currentTimeMillis();
+            long totalControllerTime = controllerEndTime - controllerStartTime;
+            
+            log.info("Tiempo total incluyendo controller: {} ms ({} segundos)", 
+                totalControllerTime, totalControllerTime / 1000.0);
             
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("data", result);
             response.put("message", "Análisis completado exitosamente");
+            response.put("controllerTimeMs", totalControllerTime);
+            response.put("controllerTimeSeconds", totalControllerTime / 1000.0);
             
             return ResponseEntity.ok(response);
             

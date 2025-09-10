@@ -245,7 +245,7 @@
                     <div class="metric-card text-center">
                         <div class="metric-label">
                             <i class="fas fa-clock me-1"></i>
-                            Tiempo Total (ms)
+                            Tiempo Total (s)
                         </div>
                         <div class="metric-number" id="processingTime">0</div>
                     </div>
@@ -358,6 +358,9 @@
             document.getElementById('loadingSpinner').style.display = 'block';
             document.getElementById('resultsSection').style.display = 'none';
             
+            // Medir tiempo del lado del cliente
+            const clientStartTime = Date.now();
+            
             try {
                 const response = await fetch('/api/analyze', {
                     method: 'POST',
@@ -366,11 +369,22 @@
                     }
                 });
                 
+                const clientEndTime = Date.now();
+                const clientTotalTime = clientEndTime - clientStartTime;
+                
                 const result = await response.json();
                 
                 if (result.success) {
+                    // Agregar tiempo del cliente a los datos
+                    result.data.clientTimeMs = clientTotalTime;
+                    result.data.clientTimeSeconds = clientTotalTime / 1000.0;
+                    
+                    console.log('Tiempo medido en el cliente:', clientTotalTime, 'ms');
+                    console.log('Tiempo medido en el servidor:', result.data.totalTimeMs, 'ms');
+                    console.log('Tiempo medido en el controller:', result.controllerTimeMs, 'ms');
+                    
                     displayResults(result.data);
-                    showAlert('success', 'Análisis completado exitosamente');
+                    showAlert('success', `Análisis completado exitosamente. Tiempo total: ${(clientTotalTime/1000).toFixed(2)}s`);
                 } else {
                     showAlert('danger', 'Error: ' + result.message);
                 }
@@ -385,8 +399,11 @@
         function displayResults(data) {
             document.getElementById('totalWords').textContent = data.totalWords.toLocaleString();
             document.getElementById('uniqueWords').textContent = data.uniqueWords.toLocaleString();
-            document.getElementById('processingTime').textContent = data.totalTimeMs.toLocaleString();
-            document.getElementById('wordsPerSecond').textContent = Math.round(data.wordsPerSecond).toLocaleString();
+            // Usar el tiempo del cliente que es el tiempo real de espera
+            document.getElementById('processingTime').textContent = data.clientTimeSeconds.toFixed(2);
+            // Calcular palabras por segundo basado en el tiempo real del cliente
+            const realWordsPerSecond = data.clientTimeSeconds > 0 ? (data.totalWords / data.clientTimeSeconds) : 0;
+            document.getElementById('wordsPerSecond').textContent = Math.round(realWordsPerSecond).toLocaleString();
 
             createWordsChart(data.topWords.slice(0, 20));
             createPerformanceChart(data);
@@ -454,19 +471,26 @@
                 performanceChart.destroy();
             }
             
+            // Calcular tiempos en milisegundos para el gráfico
+            const serverProcessingTime = data.processingTimeMs;
+            const serverOverhead = data.totalTimeMs - data.processingTimeMs;
+            const networkTime = data.clientTimeMs - data.totalTimeMs;
+            
             performanceChart = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
-                    labels: ['Tiempo de Procesamiento', 'Overhead del Sistema'],
+                    labels: ['Procesamiento', 'Overhead Servidor', 'Red y Cliente'],
                     datasets: [{
-                        data: [data.processingTimeMs, data.totalTimeMs - data.processingTimeMs],
+                        data: [serverProcessingTime, serverOverhead, Math.max(networkTime, 0)],
                         backgroundColor: [
                             'rgba(35, 134, 54, 0.8)',
-                            'rgba(218, 54, 51, 0.8)'
+                            'rgba(218, 54, 51, 0.8)',
+                            'rgba(88, 166, 255, 0.8)'
                         ],
                         borderColor: [
                             'rgba(35, 134, 54, 1)',
-                            'rgba(218, 54, 51, 1)'
+                            'rgba(218, 54, 51, 1)',
+                            'rgba(88, 166, 255, 1)'
                         ],
                         borderWidth: 2
                     }]

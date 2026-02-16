@@ -6,7 +6,6 @@ import org.springframework.stereotype.Service;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.text.Normalizer;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
@@ -124,16 +123,13 @@ public class WordAnalysisService {
     }
     
     private void processText(String text, Map<String, Integer> wordCounts) {
-        String normalizedText = Normalizer.normalize(text.toLowerCase(Locale.ROOT), Normalizer.Form.NFD)
-            .replaceAll("[\\p{InCombiningDiacriticalMarks}]", "");
-
         StringBuilder token = new StringBuilder(32);
-        int length = normalizedText.length();
+        int length = text.length();
 
         for (int index = 0; index < length; index++) {
-            char currentChar = normalizedText.charAt(index);
-            if (Character.isLetter(currentChar)) {
-                token.append(currentChar);
+            char normalizedChar = normalizeChar(text.charAt(index));
+            if (normalizedChar != 0) {
+                token.append(normalizedChar);
             } else {
                 if (token.length() >= 3) {
                     String word = token.toString();
@@ -146,6 +142,43 @@ public class WordAnalysisService {
         if (token.length() >= 3) {
             String word = token.toString();
             wordCounts.merge(word, 1, Integer::sum);
+        }
+    }
+
+    private char normalizeChar(char value) {
+        char lower = Character.toLowerCase(value);
+        switch (lower) {
+            case 'á':
+            case 'à':
+            case 'ä':
+            case 'â':
+            case 'ã':
+                return 'a';
+            case 'é':
+            case 'è':
+            case 'ë':
+            case 'ê':
+                return 'e';
+            case 'í':
+            case 'ì':
+            case 'ï':
+            case 'î':
+                return 'i';
+            case 'ó':
+            case 'ò':
+            case 'ö':
+            case 'ô':
+            case 'õ':
+                return 'o';
+            case 'ú':
+            case 'ù':
+            case 'ü':
+            case 'û':
+                return 'u';
+            case 'ñ':
+                return 'n';
+            default:
+                return Character.isLetter(lower) ? lower : 0;
         }
     }
 

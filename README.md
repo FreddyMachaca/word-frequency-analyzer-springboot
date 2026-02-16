@@ -64,7 +64,7 @@ java -jar target/reton1-0.0.1-SNAPSHOT.jar
 2. Localizar la clase principal con `@SpringBootApplication`
 3. Ejecutar como aplicación Java
 
-## 🌐 Acceso a la Aplicación
+## Acceso a la Aplicación
 
 Una vez iniciada la aplicación, accede a:
 

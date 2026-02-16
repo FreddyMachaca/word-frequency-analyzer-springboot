@@ -17,9 +17,8 @@ import java.util.stream.Collectors;
 public class WordAnalysisService {
 
     private static final Pattern WORD_PATTERN = Pattern.compile("[\\p{L}]+");
-    private static final Pattern STOPWORDS_PATTERN = Pattern.compile(
-        "\\b(el|la|de|que|y|a|en|un|es|se|no|te|lo|le|da|su|por|son|con|para|al|del|las|los|una|sobre|todo|pero|más|me|hasta|muy|ha|donde|quien|entre|sin|puede|tanto|cada|fue|uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|así|también|cuando|como|si|ya|este|esta|esto|ese|esa|eso|aquí|ahí|allí|ser|estar|tener|hacer|decir|poder|ir|ver|dar|saber|querer|llegar|pasar|deber|poner|venir|salir|volver|seguir|llevar|quedar|traer|desde|contra|durante)\\b",
-        Pattern.CASE_INSENSITIVE
+    private static final Set<String> STOPWORDS = Set.of(
+        "el", "la", "de", "que", "y", "a", "en", "un", "es", "se", "no", "te", "lo", "le", "da", "su", "por", "son", "con", "para", "al", "del", "las", "los", "una", "sobre", "todo", "pero", "mas", "me", "hasta", "muy", "ha", "donde", "quien", "entre", "sin", "puede", "tanto", "cada", "fue", "uno", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve", "diez", "asi", "tambien", "cuando", "como", "si", "ya", "este", "esta", "esto", "ese", "esa", "eso", "aqui", "ahi", "alli", "ser", "estar", "tener", "hacer", "decir", "poder", "ir", "ver", "dar", "saber", "querer", "llegar", "pasar", "deber", "poner", "venir", "salir", "volver", "seguir", "llevar", "quedar", "traer", "desde", "contra", "durante"
     );
     
     public AnalysisResult analyzeFile(String filePath) {
@@ -33,16 +32,15 @@ public class WordAnalysisService {
             
             long processingTime = System.currentTimeMillis() - startTime;
             
-            Map<String, Integer> filteredWords = wordCounts.entrySet().stream()
-                .filter(entry -> entry.getKey().length() >= 3)
-                .filter(entry -> !STOPWORDS_PATTERN.matcher(entry.getKey()).matches())
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-            
-            List<WordFrequency> topWords = filteredWords.entrySet().stream()
-                .map(entry -> new WordFrequency(entry.getKey(), entry.getValue()))
-                .sorted((a, b) -> Integer.compare(b.getCount(), a.getCount()))
-                .limit(100)
-                .collect(Collectors.toList());
+            Map<String, Integer> filteredWords = new HashMap<>(wordCounts.size());
+            for (Map.Entry<String, Integer> entry : wordCounts.entrySet()) {
+                String word = entry.getKey();
+                if (word.length() >= 3 && !STOPWORDS.contains(word)) {
+                    filteredWords.put(word, entry.getValue());
+                }
+            }
+
+            List<WordFrequency> topWords = buildTopWords(filteredWords, 100);
             
             long totalTime = System.currentTimeMillis() - startTime;
             
@@ -85,7 +83,7 @@ public class WordAnalysisService {
                 futures.add(executor.submit(() -> processFileChunk(filePath, start, end)));
             }
             
-            Map<String, Integer> combinedResults = new ConcurrentHashMap<>();
+            Map<String, Integer> combinedResults = new HashMap<>();
             for (Future<Map<String, Integer>> future : futures) {
                 Map<String, Integer> chunkResult = future.get();
                 chunkResult.forEach((word, count) -> 
@@ -110,18 +108,15 @@ public class WordAnalysisService {
                 start = file.getFilePointer();
             }
             
-            StringBuilder buffer = new StringBuilder();
             long currentPos = start;
             
             while (currentPos < end) {
                 String line = file.readLine();
                 if (line == null) break;
-                
-                buffer.append(line).append(" ");
+
+                processText(line, wordCounts);
                 currentPos = file.getFilePointer();
             }
-            
-            processText(buffer.toString(), wordCounts);
             
         } catch (IOException e) {
             log.error("Error procesando chunk del archivo", e);
@@ -141,6 +136,24 @@ public class WordAnalysisService {
                 wordCounts.merge(word, 1, Integer::sum);
             }
         }
+    }
+
+    private List<WordFrequency> buildTopWords(Map<String, Integer> wordCounts, int limit) {
+        PriorityQueue<WordFrequency> heap = new PriorityQueue<>(Comparator.comparingInt(WordFrequency::getCount));
+
+        for (Map.Entry<String, Integer> entry : wordCounts.entrySet()) {
+            WordFrequency item = new WordFrequency(entry.getKey(), entry.getValue());
+            if (heap.size() < limit) {
+                heap.offer(item);
+            } else if (item.getCount() > Objects.requireNonNull(heap.peek()).getCount()) {
+                heap.poll();
+                heap.offer(item);
+            }
+        }
+
+        List<WordFrequency> top = new ArrayList<>(heap);
+        top.sort((a, b) -> Integer.compare(b.getCount(), a.getCount()));
+        return top;
     }
     
     private long getFileSize(String filePath) {

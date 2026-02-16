@@ -9,14 +9,12 @@ import java.nio.file.Paths;
 import java.text.Normalizer;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
 @Slf4j
 public class WordAnalysisService {
 
-    private static final Pattern WORD_PATTERN = Pattern.compile("[\\p{L}]+");
     private static final Set<String> STOPWORDS = Set.of(
         "el", "la", "de", "que", "y", "a", "en", "un", "es", "se", "no", "te", "lo", "le", "da", "su", "por", "son", "con", "para", "al", "del", "las", "los", "una", "sobre", "todo", "pero", "mas", "me", "hasta", "muy", "ha", "donde", "quien", "entre", "sin", "puede", "tanto", "cada", "fue", "uno", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve", "diez", "asi", "tambien", "cuando", "como", "si", "ya", "este", "esta", "esto", "ese", "esa", "eso", "aqui", "ahi", "alli", "ser", "estar", "tener", "hacer", "decir", "poder", "ir", "ver", "dar", "saber", "querer", "llegar", "pasar", "deber", "poner", "venir", "salir", "volver", "seguir", "llevar", "quedar", "traer", "desde", "contra", "durante"
     );
@@ -126,15 +124,28 @@ public class WordAnalysisService {
     }
     
     private void processText(String text, Map<String, Integer> wordCounts) {
-        String normalizedText = Normalizer.normalize(text.toLowerCase(), Normalizer.Form.NFD)
+        String normalizedText = Normalizer.normalize(text.toLowerCase(Locale.ROOT), Normalizer.Form.NFD)
             .replaceAll("[\\p{InCombiningDiacriticalMarks}]", "");
 
-        java.util.regex.Matcher matcher = WORD_PATTERN.matcher(normalizedText);
-        while (matcher.find()) {
-            String word = matcher.group();
-            if (word.length() >= 3) {
-                wordCounts.merge(word, 1, Integer::sum);
+        StringBuilder token = new StringBuilder(32);
+        int length = normalizedText.length();
+
+        for (int index = 0; index < length; index++) {
+            char currentChar = normalizedText.charAt(index);
+            if (Character.isLetter(currentChar)) {
+                token.append(currentChar);
+            } else {
+                if (token.length() >= 3) {
+                    String word = token.toString();
+                    wordCounts.merge(word, 1, Integer::sum);
+                }
+                token.setLength(0);
             }
+        }
+
+        if (token.length() >= 3) {
+            String word = token.toString();
+            wordCounts.merge(word, 1, Integer::sum);
         }
     }
 
